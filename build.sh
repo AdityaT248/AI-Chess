@@ -1,8 +1,16 @@
 #!/bin/bash
 
+# Create .env file with SKIP_PREFLIGHT_CHECK=true
+echo "Creating .env file..."
+echo "SKIP_PREFLIGHT_CHECK=true" > .env
+
 # Clean install with legacy peer deps
 echo "Installing dependencies..."
 npm ci --legacy-peer-deps
+
+# Remove any existing eslint to avoid conflicts
+echo "Removing conflicting packages..."
+npm uninstall eslint --no-save
 
 # Install specific versions of problematic packages
 echo "Installing specific package versions..."

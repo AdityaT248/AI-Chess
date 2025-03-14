@@ -6,7 +6,7 @@ services:
     staticPublishPath: ./build
     envVars:
       - key: NODE_VERSION
-        value: 16.14.0
+        value: 18.17.1
       - key: CI
         value: false
     headers:
