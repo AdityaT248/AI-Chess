@@ -1,9 +1,12 @@
 import { 
+  // eslint-disable-next-line no-unused-vars
   makeMove, 
   isValidMove, 
   // eslint-disable-next-line no-unused-vars
   isInCheck, 
+  // eslint-disable-next-line no-unused-vars
   isCheckmate, 
+  // eslint-disable-next-line no-unused-vars
   isStalemate 
 } from './chessLogic';
 
@@ -346,6 +349,10 @@ const generatePieceMoves = (board, row, col, gameState) => {
       }
       break;
     }
+    
+    default:
+      // No moves for unknown piece types
+      break;
   }
   
   return moves;

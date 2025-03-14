@@ -153,10 +153,6 @@ const ChessBoard = ({
     return map;
   }, [highlightedSquares]);
   
-  const isHighlighted = (row, col) => {
-    return !!highlightedSquaresMap[`${row}-${col}`];
-  };
-
   // Check if a square is part of the last move - memoized
   const lastMoveMap = useMemo(() => {
     if (!lastMove) return {};
@@ -168,10 +164,6 @@ const ChessBoard = ({
     };
   }, [lastMove]);
   
-  const isLastMove = (row, col) => {
-    return !!lastMoveMap[`${row}-${col}`];
-  };
-
   // Check if a square is part of a hint - memoized
   const hintSquareMap = useMemo(() => {
     if (!hintMove) return {};
@@ -182,14 +174,23 @@ const ChessBoard = ({
       [`${toRow}-${toCol}`]: true
     };
   }, [hintMove]);
-  
-  const isHintSquare = (row, col) => {
-    return !!hintSquareMap[`${row}-${col}`];
-  };
 
   // Render the board - memoized for performance
   const boardRows = useMemo(() => {
     const squares = [];
+    
+    // Define these functions inside the useMemo callback to avoid dependency issues
+    const isHighlighted = (row, col) => {
+      return !!highlightedSquaresMap[`${row}-${col}`];
+    };
+    
+    const isLastMove = (row, col) => {
+      return !!lastMoveMap[`${row}-${col}`];
+    };
+    
+    const isHintSquare = (row, col) => {
+      return !!hintSquareMap[`${row}-${col}`];
+    };
     
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
@@ -218,7 +219,7 @@ const ChessBoard = ({
     }
     
     return squares;
-  }, [board, selectedPiece, checkIndicator, theme, onSquareClick, isHighlighted, isLastMove, isHintSquare]);
+  }, [board, selectedPiece, checkIndicator, theme, onSquareClick, highlightedSquaresMap, lastMoveMap, hintSquareMap]);
 
   // Apply theme styles
   const containerStyle = useMemo(() => ({

@@ -14,7 +14,7 @@ import {
   isStalemate,
   isPawnPromotion
 } from './utils/chessLogic';
-import { findBestMove, getAIMove } from './utils/aiPlayer';
+import { getAIMove } from './utils/aiPlayer';
 
 // eslint-disable-next-line no-unused-vars
 function App() {
@@ -81,7 +81,7 @@ function App() {
     setHighlightedSquares([]);
     setShowHint(false);
     setHintMove(null);
-  }, [board, gameState]);
+  }, [board, gameState, generateMoveNotation]);
 
   // Update the ref whenever handleMove changes
   useEffect(() => {
@@ -205,6 +205,7 @@ function App() {
     setHighlightedSquares(validMoves);
   }, [validMoves]);
 
+  // eslint-disable-next-line no-unused-vars
   const getPieceSymbol = useCallback((pieceType) => {
     switch (pieceType) {
       case 'pawn': return '';
