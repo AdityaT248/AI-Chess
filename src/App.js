@@ -42,6 +42,39 @@ function App() {
   // Create a ref to store the handleMove function
   const handleMoveRef = useRef(null);
 
+  // Generate algebraic notation for a move
+  const generateMoveNotation = useCallback((piece, fromRow, fromCol, toRow, toCol, capturedPiece, promotionPiece) => {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    
+    let notation = '';
+    
+    // Add piece letter (except for pawns)
+    if (piece.type !== 'pawn') {
+      notation += piece.type.charAt(0).toUpperCase();
+    }
+    
+    // Add starting position for pawns if capturing
+    if (piece.type === 'pawn' && capturedPiece) {
+      notation += files[fromCol];
+    }
+    
+    // Add 'x' if capturing
+    if (capturedPiece) {
+      notation += 'x';
+    }
+    
+    // Add destination square
+    notation += files[toCol] + ranks[toRow];
+    
+    // Add promotion piece
+    if (promotionPiece) {
+      notation += '=' + promotionPiece.charAt(0).toUpperCase();
+    }
+    
+    return notation;
+  }, []);
+
   // Handle move
   const handleMove = useCallback((fromRow, fromCol, toRow, toCol, promotionPiece = null) => {
     // eslint-disable-next-line no-unused-vars
@@ -216,40 +249,6 @@ function App() {
       case 'king': return 'K';
       default: return '';
     }
-  }, []);
-
-  // Generate algebraic notation for a move
-  const generateMoveNotation = useCallback((piece, fromRow, fromCol, toRow, toCol, capturedPiece, promotionPiece) => {
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
-    
-    const fromSquare = files[fromCol] + ranks[fromRow];
-    const toSquare = files[toCol] + ranks[toRow];
-    
-    let notation = '';
-    
-    // Add piece symbol (except for pawns)
-    if (piece.type !== 'pawn') {
-      notation += piece.type.charAt(0).toUpperCase();
-    }
-    
-    // Add capture symbol if applicable
-    if (capturedPiece) {
-      if (piece.type === 'pawn') {
-        notation += fromSquare.charAt(0);
-      }
-      notation += 'x';
-    }
-    
-    // Add destination square
-    notation += toSquare;
-    
-    // Add promotion piece if applicable
-    if (promotionPiece) {
-      notation += '=' + promotionPiece.charAt(0).toUpperCase();
-    }
-    
-    return notation;
   }, []);
 
   const handleSquareClick = useCallback((row, col) => {
