@@ -1,0 +1,22 @@
+# React and React DOM
+react>=17.0.2
+react-dom>=17.0.2
+
+# React Scripts (for Create React App)
+react-scripts>=4.0.3
+
+# Testing Libraries
+@testing-library/jest-dom>=5.16.5
+@testing-library/react>=13.4.0
+@testing-library/user-event>=13.5.0
+
+# Web Vitals (for performance monitoring)
+web-vitals>=2.1.4
+
+# Development Dependencies
+eslint>=8.0.0
+eslint-plugin-react>=7.32.2
+prettier>=2.8.8
+
+# Optional: For deployment
+serve>=14.2.0 
