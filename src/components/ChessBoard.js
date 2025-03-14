@@ -199,8 +199,11 @@ const ChessBoard = ({
         const isSelected = selectedPiece && selectedPiece.row === row && selectedPiece.col === col;
         const isCheck = checkIndicator && piece && piece.type === 'king' && piece.color === checkIndicator;
         
+        // Get the square color from the theme
+        const squareColor = isLight ? theme.lightSquare : theme.darkSquare;
+        
         squares.push(
-          <Square 
+          <Square
             key={`${row}-${col}`}
             row={row}
             col={col}
@@ -211,7 +214,7 @@ const ChessBoard = ({
             isCheck={isCheck}
             isLastMove={isLastMove(row, col)}
             isHint={isHintSquare(row, col)}
-            squareColor={isLight ? theme.lightSquare : theme.darkSquare}
+            squareColor={squareColor}
             onClick={() => onSquareClick(row, col)}
           />
         );

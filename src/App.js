@@ -77,7 +77,10 @@ function App() {
 
   // Handle move
   const handleMove = useCallback((fromRow, fromCol, toRow, toCol, promotionPiece = null) => {
-    // eslint-disable-next-line no-unused-vars
+    // Get the piece before making the move
+    const piece = board[fromRow][fromCol];
+    
+    // Make the move
     const { board: newBoard, gameState: newGameState, capturedPiece } = makeMove(
       board, 
       fromRow, 
@@ -88,13 +91,14 @@ function App() {
       promotionPiece
     );
     
+    // Update the board and game state
     setBoard(newBoard);
     setGameState(newGameState);
     
-    // Add move to history
-    const piece = board[fromRow][fromCol];
+    // Generate notation for the move
     const notation = generateMoveNotation(piece, fromRow, fromCol, toRow, toCol, capturedPiece, promotionPiece);
     
+    // Add move to history
     const newMove = {
       from: { row: fromRow, col: fromCol },
       to: { row: toRow, col: toCol },
@@ -123,13 +127,13 @@ function App() {
 
   // Make AI move - optimized version
   const makeAIMove = useCallback(() => {
-    if (playerTurn === 'black' && gameStatus === 'ongoing') {
+    if (playerTurn === 'black' && gameStatus === 'ongoing' && !aiThinking) {
       setAiThinking(true);
       
-      // Use requestAnimationFrame to ensure UI updates before AI calculation
-      requestAnimationFrame(() => {
+      // Add a small delay before starting AI calculation to ensure UI updates
+      setTimeout(() => {
         try {
-          // Get AI move directly - the new algorithm is fast enough
+          // Get AI move with a timeout to prevent infinite calculations
           const aiMove = getAIMove(board, 'black', gameState, aiDifficulty);
           
           if (aiMove) {
@@ -167,35 +171,54 @@ function App() {
               handleMoveRef.current(fromRow, fromCol, toRow, toCol);
             }
           }
-          
-          // Add a small delay to make the AI move visible to the user
-          setTimeout(() => {
-            setAiThinking(false);
-          }, 200);
         } catch (error) {
           console.error("Error in AI move calculation:", error);
+        } finally {
+          // Always set aiThinking to false when done, even if there was an error
           setAiThinking(false);
         }
-      });
+      }, 300); // Add a 300ms delay to ensure UI updates before AI calculation
     }
-  }, [board, playerTurn, gameStatus, gameState, aiDifficulty]);
+  }, [board, playerTurn, gameStatus, gameState, aiDifficulty, aiThinking]);
+
+  // AI makes a move when it's black's turn - with debounce protection
+  useEffect(() => {
+    let timeoutId = null;
+    
+    if (playerTurn === 'black' && gameStatus === 'ongoing' && !aiThinking) {
+      // Use a timeout to debounce multiple calls
+      timeoutId = setTimeout(() => {
+        makeAIMove();
+      }, 500);
+    }
+    
+    // Cleanup function to clear the timeout if component updates before timeout completes
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [playerTurn, gameStatus, makeAIMove, aiThinking]);
 
   // Check for check, checkmate, or stalemate after each move
   useEffect(() => {
     if (moveHistory.length > 0) {
       // Check if any king is in check
-      if (isInCheck(board, 'white')) {
+      const whiteInCheck = isInCheck(board, 'white');
+      const blackInCheck = isInCheck(board, 'black');
+      
+      if (whiteInCheck) {
         setCheckIndicator('white');
         
         // Check if it's checkmate
-        if (isCheckmate(board, 'white')) {
+        if (isCheckmate(board, 'white', gameState)) {
           setGameStatus('Checkmate! Black wins.');
         }
-      } else if (isInCheck(board, 'black')) {
+      } else if (blackInCheck) {
         setCheckIndicator('black');
         
         // Check if it's checkmate
-        if (isCheckmate(board, 'black')) {
+        if (isCheckmate(board, 'black', gameState)) {
           setGameStatus('Checkmate! White wins.');
         }
       } else {
@@ -203,20 +226,13 @@ function App() {
       }
       
       // Check for stalemate
-      if (playerTurn === 'white' && isStalemate(board, 'white')) {
+      if (playerTurn === 'white' && isStalemate(board, 'white', gameState)) {
         setGameStatus('Draw by stalemate');
-      } else if (playerTurn === 'black' && isStalemate(board, 'black')) {
+      } else if (playerTurn === 'black' && isStalemate(board, 'black', gameState)) {
         setGameStatus('Draw by stalemate');
       }
     }
-  }, [board, playerTurn, moveHistory]);
-
-  // AI makes a move when it's black's turn
-  useEffect(() => {
-    if (playerTurn === 'black' && gameStatus === 'ongoing') {
-      makeAIMove();
-    }
-  }, [playerTurn, gameStatus, makeAIMove]);
+  }, [board, playerTurn, moveHistory, gameState]);
 
   // Calculate valid moves for the selected piece - memoized
   const validMoves = useMemo(() => {

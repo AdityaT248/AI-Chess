@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "./static/css/main.92ddb77c.chunk.css",
-    "main.js": "./static/js/main.acdb7e91.chunk.js",
-    "main.js.map": "./static/js/main.acdb7e91.chunk.js.map",
+    "main.css": "./static/css/main.f1240733.chunk.css",
+    "main.js": "./static/js/main.033754e6.chunk.js",
+    "main.js.map": "./static/js/main.033754e6.chunk.js.map",
     "runtime-main.js": "./static/js/runtime-main.ac029acf.js",
     "runtime-main.js.map": "./static/js/runtime-main.ac029acf.js.map",
     "static/js/2.1c35e35c.chunk.js": "./static/js/2.1c35e35c.chunk.js",
     "static/js/2.1c35e35c.chunk.js.map": "./static/js/2.1c35e35c.chunk.js.map",
     "index.html": "./index.html",
-    "static/css/main.92ddb77c.chunk.css.map": "./static/css/main.92ddb77c.chunk.css.map",
+    "static/css/main.f1240733.chunk.css.map": "./static/css/main.f1240733.chunk.css.map",
     "static/js/2.1c35e35c.chunk.js.LICENSE.txt": "./static/js/2.1c35e35c.chunk.js.LICENSE.txt",
     "static/media/black-bishop.d3b59849.svg": "./static/media/black-bishop.d3b59849.svg",
     "static/media/black-king.5c3d9d02.svg": "./static/media/black-king.5c3d9d02.svg",
@@ -26,7 +26,7 @@
   "entrypoints": [
     "static/js/runtime-main.ac029acf.js",
     "static/js/2.1c35e35c.chunk.js",
-    "static/css/main.92ddb77c.chunk.css",
-    "static/js/main.acdb7e91.chunk.js"
+    "static/css/main.f1240733.chunk.css",
+    "static/js/main.033754e6.chunk.js"
   ]
 }

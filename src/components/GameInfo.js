@@ -92,14 +92,16 @@ const GameInfo = ({
         <div className="player-indicators">
           <div className={`player-indicator ${playerTurn === 'white' ? 'active' : ''}`}>
             <span className="white">White</span>
+            {isInCheck && playerTurn === 'white' && <span className="check-indicator">CHECK!</span>}
           </div>
           <div className={`player-indicator ${playerTurn === 'black' ? 'active' : ''}`}>
             <span className="black">Black</span>
+            {isInCheck && playerTurn === 'black' && <span className="check-indicator">CHECK!</span>}
           </div>
         </div>
         {isInCheck && gameStatus === 'ongoing' && (
           <div className="check-status">
-            {playerTurn === 'white' ? 'White' : 'Black'} is in check!
+            {isInCheck === 'white' ? 'White' : 'Black'} is in check!
           </div>
         )}
         {gameStatus !== 'ongoing' && (

@@ -82,6 +82,12 @@
   animation: checkPulse 1.5s infinite;
 }
 
+/* Add a special effect for the king in check */
+.square.check .piece {
+  filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
+  animation: kingInCheck 1s infinite alternate;
+}
+
 .square.last-move {
   background-color: rgba(255, 209, 102, 0.4);
 }
@@ -225,6 +231,17 @@
   }
   100% {
     box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+  }
+}
+
+@keyframes kingInCheck {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.8));
+  }
+  100% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.9));
   }
 }
 
