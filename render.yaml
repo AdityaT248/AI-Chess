@@ -1,15 +1,17 @@
 services:
   - type: web
     name: ai-chess
-    env: static
-    buildCommand: chmod +x build.sh && ./build.sh
-    staticPublishPath: ./build
+    env: node
+    buildCommand: npm run render-build
+    startCommand: npm run start-server
     envVars:
       - key: NODE_VERSION
         value: 18.17.1
+      - key: NODE_OPTIONS
+        value: --openssl-legacy-provider
       - key: CI
         value: false
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache 
+      - key: SKIP_PREFLIGHT_CHECK
+        value: true
+      - key: PORT
+        value: 10000 

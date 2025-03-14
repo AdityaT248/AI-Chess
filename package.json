@@ -14,6 +14,7 @@
     "@testing-library/user-event": "^12.8.3",
     "ajv": "^6.12.6",
     "ajv-keywords": "^3.5.2",
+    "express": "^4.18.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-scripts": "4.0.3",
@@ -25,7 +26,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "serve": "serve -s build",
-    "render-build": "npm ci --legacy-peer-deps && npm install react-dev-utils@12.0.1 --legacy-peer-deps && npm install react-scripts@4.0.3 --legacy-peer-deps && npm run build"
+    "start-server": "node deploy.js",
+    "render-build": "rm -f package-lock.json && npm install --legacy-peer-deps && npm install react-dev-utils@12.0.1 --legacy-peer-deps && npm install react-scripts@4.0.3 --legacy-peer-deps && CI=false npm run build",
+    "render-build-yarn": "rm -f yarn.lock && yarn install --ignore-engines && yarn add react-dev-utils@12.0.1 react-scripts@4.0.3 && CI=false yarn build"
   },
   "eslintConfig": {
     "extends": [
@@ -49,6 +52,11 @@
     "eslint-plugin-react": "^7.32.2",
     "prettier": "^2.8.8",
     "serve": "^14.2.0"
+  },
+  "resolutions": {
+    "react-scripts/eslint": "7.32.0",
+    "react-scripts/webpack": "4.44.2",
+    "react-scripts/webpack-dev-server": "3.11.1"
   },
   "keywords": [
     "chess",

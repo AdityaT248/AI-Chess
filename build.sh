@@ -4,9 +4,13 @@
 echo "Creating .env file..."
 echo "SKIP_PREFLIGHT_CHECK=true" > .env
 
-# Clean install with legacy peer deps
+# Remove package-lock.json to avoid conflicts
+echo "Removing package-lock.json..."
+rm -f package-lock.json
+
+# Install dependencies with legacy peer deps
 echo "Installing dependencies..."
-npm ci --legacy-peer-deps
+npm install --legacy-peer-deps
 
 # Remove any existing eslint to avoid conflicts
 echo "Removing conflicting packages..."
