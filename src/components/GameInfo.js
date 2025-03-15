@@ -9,7 +9,8 @@ const GameInfo = ({
   isInCheck,
   aiDifficulty,
   onGetHint,
-  aiThinking
+  aiThinking,
+  onDifficultyChange
 }) => {
   const [activeTab, setActiveTab] = useState('moves');
   
@@ -158,9 +159,9 @@ const GameInfo = ({
   // Render analysis
   const renderAnalysis = () => {
     const searchDepth = {
-      'easy': 1,
-      'medium': 2,
-      'hard': 3
+      'easy': 3,
+      'medium': 4,
+      'hard': 5
     }[aiDifficulty];
     
     return (
@@ -178,6 +179,16 @@ const GameInfo = ({
         <div className="analysis-item">
           <span className="analysis-label">AI Thinking Depth</span>
           <span className="analysis-value">{searchDepth} {searchDepth === 1 ? 'move' : 'moves'}</span>
+        </div>
+        <div className="analysis-item">
+          <span className="analysis-label">AI Status</span>
+          <span className="analysis-value">
+            {aiThinking ? (
+              <span className="ai-thinking-status">Calculating...</span>
+            ) : (
+              <span className="ai-ready-status">Ready</span>
+            )}
+          </span>
         </div>
       </div>
     );
@@ -205,6 +216,33 @@ const GameInfo = ({
       
       <div className="tab-content">
         {activeTab === 'moves' ? renderMoveHistory() : renderAnalysis()}
+      </div>
+      
+      <div className="difficulty-section">
+        <label>AI Difficulty:</label>
+        <div className="difficulty-buttons">
+          <button 
+            className={`difficulty-button ${aiDifficulty === 'easy' ? 'active' : ''}`}
+            onClick={() => onDifficultyChange('easy')}
+            disabled={aiThinking}
+          >
+            Easy
+          </button>
+          <button 
+            className={`difficulty-button ${aiDifficulty === 'medium' ? 'active' : ''}`}
+            onClick={() => onDifficultyChange('medium')}
+            disabled={aiThinking}
+          >
+            Medium
+          </button>
+          <button 
+            className={`difficulty-button ${aiDifficulty === 'hard' ? 'active' : ''}`}
+            onClick={() => onDifficultyChange('hard')}
+            disabled={aiThinking}
+          >
+            Hard
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -130,20 +130,20 @@ function App() {
     if (playerTurn === 'black' && gameStatus === 'ongoing' && !aiThinking) {
       setAiThinking(true);
       
-      // Add a small delay before starting AI calculation to ensure UI updates
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure UI updates before AI calculation
+      requestAnimationFrame(() => {
         try {
-          // Get AI move with a timeout to prevent infinite calculations
+          // Get AI move with the current difficulty level
           const aiMove = getAIMove(board, 'black', gameState, aiDifficulty);
           
           if (aiMove) {
-            const { fromRow, fromCol, toRow, toCol } = aiMove;
+            const { fromRow, fromCol, toRow, toCol, promotionPiece } = aiMove;
             const piece = board[fromRow][fromCol];
             
             // Check if this is a pawn promotion
             if (isPawnPromotion(piece, toRow)) {
-              // AI always promotes to queen
-              handleMoveRef.current(fromRow, fromCol, toRow, toCol, 'queen');
+              // Use the AI's choice of promotion piece or default to queen
+              handleMoveRef.current(fromRow, fromCol, toRow, toCol, promotionPiece || 'queen');
             } else {
               handleMoveRef.current(fromRow, fromCol, toRow, toCol);
             }
@@ -157,7 +157,12 @@ function App() {
                   for (let toRow = 0; toRow < 8; toRow++) {
                     for (let toCol = 0; toCol < 8; toCol++) {
                       if (isValidMove(board, fromRow, fromCol, toRow, toCol, gameState)) {
-                        moves.push({ fromRow, fromCol, toRow, toCol });
+                        // Check for pawn promotion
+                        if (piece.type === 'pawn' && toRow === 7) {
+                          moves.push({ fromRow, fromCol, toRow, toCol, promotionPiece: 'queen' });
+                        } else {
+                          moves.push({ fromRow, fromCol, toRow, toCol });
+                        }
                       }
                     }
                   }
@@ -167,8 +172,8 @@ function App() {
             
             if (moves.length > 0) {
               const randomMove = moves[Math.floor(Math.random() * moves.length)];
-              const { fromRow, fromCol, toRow, toCol } = randomMove;
-              handleMoveRef.current(fromRow, fromCol, toRow, toCol);
+              const { fromRow, fromCol, toRow, toCol, promotionPiece } = randomMove;
+              handleMoveRef.current(fromRow, fromCol, toRow, toCol, promotionPiece);
             }
           }
         } catch (error) {
@@ -177,7 +182,7 @@ function App() {
           // Always set aiThinking to false when done, even if there was an error
           setAiThinking(false);
         }
-      }, 300); // Add a 300ms delay to ensure UI updates before AI calculation
+      });
     }
   }, [board, playerTurn, gameStatus, gameState, aiDifficulty, aiThinking]);
 
@@ -204,8 +209,8 @@ function App() {
   useEffect(() => {
     if (moveHistory.length > 0) {
       // Check if any king is in check
-      const whiteInCheck = isInCheck(board, 'white');
-      const blackInCheck = isInCheck(board, 'black');
+      const whiteInCheck = isInCheck(board, 'white', gameState);
+      const blackInCheck = isInCheck(board, 'black', gameState);
       
       if (whiteInCheck) {
         setCheckIndicator('white');
@@ -398,6 +403,10 @@ function App() {
         <div className="author-credits">
           <span>Created by Aditya Thakkar</span>
         </div>
+        <ThemeSelector 
+          currentTheme={currentTheme} 
+          onThemeChange={handleThemeChange} 
+        />
       </div>
       <div className="difficulty-selector">
         <span className="difficulty-label">AI Difficulty:</span>
@@ -422,10 +431,6 @@ function App() {
           </button>
         </div>
       </div>
-      <ThemeSelector 
-        currentTheme={currentTheme} 
-        onThemeChange={handleThemeChange} 
-      />
       <div className="game-container">
         <ChessBoard 
           board={board} 
@@ -441,11 +446,12 @@ function App() {
           playerTurn={playerTurn} 
           gameStatus={gameStatus} 
           moveHistory={moveHistory} 
-          onResetGame={resetGame} 
-          isInCheck={checkIndicator !== null}
+          onResetGame={resetGame}
+          isInCheck={checkIndicator}
           aiDifficulty={aiDifficulty}
           onGetHint={getHint}
           aiThinking={aiThinking}
+          onDifficultyChange={handleDifficultyChange}
         />
       </div>
       {promotionDialog && (
@@ -454,6 +460,7 @@ function App() {
           color="white"
           onSelect={handlePromotion}
           onCancel={() => setPromotionDialog(null)}
+          theme={currentThemeObject}
         />
       )}
       <div className="app-footer">

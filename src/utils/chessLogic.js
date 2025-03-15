@@ -69,15 +69,15 @@ export const findKing = (board, color) => {
 export const isSquareUnderAttack = (board, row, col, attackerColor) => {
   // Check attacks from pawns
   const pawnDirection = attackerColor === 'white' ? -1 : 1;
-  if (row + pawnDirection >= 0 && row + pawnDirection < 8) {
+  if (row - pawnDirection >= 0 && row - pawnDirection < 8) {
     if (col - 1 >= 0) {
-      const piece = board[row + pawnDirection][col - 1];
+      const piece = board[row - pawnDirection][col - 1];
       if (piece && piece.type === 'pawn' && piece.color === attackerColor) {
         return true;
       }
     }
     if (col + 1 < 8) {
-      const piece = board[row + pawnDirection][col + 1];
+      const piece = board[row - pawnDirection][col + 1];
       if (piece && piece.type === 'pawn' && piece.color === attackerColor) {
         return true;
       }
@@ -142,7 +142,7 @@ export const isSquareUnderAttack = (board, row, col, attackerColor) => {
 };
 
 // Check if the king of the given color is in check
-export const isInCheck = (board, color) => {
+export const isInCheck = (board, color, gameState) => {
   const kingPos = findKing(board, color);
   if (!kingPos) return false;
   
@@ -151,15 +151,40 @@ export const isInCheck = (board, color) => {
 };
 
 // Check if a move would leave the king in check
-// eslint-disable-next-line no-unused-vars
-const wouldBeInCheck = (board, fromRow, fromCol, toRow, toCol, color) => {
+const wouldBeInCheck = (board, fromRow, fromCol, toRow, toCol, color, gameState) => {
   // Make the move on a cloned board
   const newBoard = cloneBoard(board);
+  const piece = newBoard[fromRow][fromCol];
+  
+  // Handle en passant capture
+  if (piece.type === 'pawn' && fromCol !== toCol && !newBoard[toRow][toCol] && 
+      gameState && gameState.enPassantTarget &&
+      toRow === gameState.enPassantTarget.row && toCol === gameState.enPassantTarget.col) {
+    // Remove the captured pawn
+    const capturedPawnRow = color === 'white' ? toRow + 1 : toRow - 1;
+    newBoard[capturedPawnRow][toCol] = null;
+  }
+  
+  // Handle castling
+  if (piece.type === 'king' && Math.abs(fromCol - toCol) === 2) {
+    // Kingside castling
+    if (toCol > fromCol) {
+      newBoard[toRow][toCol - 1] = newBoard[toRow][7]; // Move rook
+      newBoard[toRow][7] = null; // Remove rook from original position
+    } 
+    // Queenside castling
+    else {
+      newBoard[toRow][toCol + 1] = newBoard[toRow][0]; // Move rook
+      newBoard[toRow][0] = null; // Remove rook from original position
+    }
+  }
+  
+  // Make the move
   newBoard[toRow][toCol] = newBoard[fromRow][fromCol];
   newBoard[fromRow][fromCol] = null;
   
   // Check if the king is in check after the move
-  return isInCheck(newBoard, color);
+  return isInCheck(newBoard, color, gameState);
 };
 
 // Check if a move is valid
@@ -179,6 +204,11 @@ export const isValidMove = (board, fromRow, fromCol, toRow, toCol, gameState) =>
   // Check if the destination has a piece of the same color
   const targetPiece = board[toRow][toCol];
   if (targetPiece && targetPiece.color === piece.color) {
+    return false;
+  }
+  
+  // Prevent capturing the king
+  if (targetPiece && targetPiece.type === 'king') {
     return false;
   }
   
@@ -210,16 +240,8 @@ export const isValidMove = (board, fromRow, fromCol, toRow, toCol, gameState) =>
   
   // If the move is valid according to piece rules, check if it would leave the king in check
   if (isValid) {
-    // Make a temporary move
-    const tempBoard = cloneBoard(board);
-    tempBoard[toRow][toCol] = tempBoard[fromRow][fromCol];
-    tempBoard[fromRow][fromCol] = null;
-    
-    // Check if the king is in check after the move
-    const kingInCheck = isInCheck(tempBoard, piece.color);
-    
-    // If the king is in check, the move is not valid
-    if (kingInCheck) {
+    // Check if the king would be in check after the move
+    if (wouldBeInCheck(board, fromRow, fromCol, toRow, toCol, piece.color, gameState)) {
       return false;
     }
   }
@@ -336,7 +358,7 @@ const isValidKingMove = (board, fromRow, fromCol, toRow, toCol, gameState) => {
   }
   
   // Castling
-  if (rowDiff === 0 && colDiff === 2 && !piece.hasMoved && !isInCheck(board, piece.color)) {
+  if (rowDiff === 0 && colDiff === 2 && !piece.hasMoved && !isInCheck(board, piece.color, gameState)) {
     // Kingside castling
     if (toCol > fromCol) {
       const rook = board[fromRow][7];
@@ -454,28 +476,22 @@ export const makeMove = (board, fromRow, fromCol, toRow, toCol, gameState, promo
 };
 
 // Check if a player is in checkmate
-export const isCheckmate = (board, color, gameState = {}) => {
-  // If not in check, can't be checkmate
-  if (!isInCheck(board, color)) return false;
+export const isCheckmate = (board, color, gameState) => {
+  // If the king is not in check, it's not checkmate
+  if (!isInCheck(board, color, gameState)) {
+    return false;
+  }
   
-  // Check if any move can get out of check
+  // Check if any legal move exists
   for (let fromRow = 0; fromRow < 8; fromRow++) {
     for (let fromCol = 0; fromCol < 8; fromCol++) {
       const piece = board[fromRow][fromCol];
       if (piece && piece.color === color) {
         for (let toRow = 0; toRow < 8; toRow++) {
           for (let toCol = 0; toCol < 8; toCol++) {
-            // Check if this is a valid move that gets the king out of check
             if (isValidMove(board, fromRow, fromCol, toRow, toCol, gameState)) {
-              // Make a temporary move
-              const tempBoard = cloneBoard(board);
-              tempBoard[toRow][toCol] = tempBoard[fromRow][fromCol];
-              tempBoard[fromRow][fromCol] = null;
-              
-              // If this move gets the king out of check, it's not checkmate
-              if (!isInCheck(tempBoard, color)) {
-                return false;
-              }
+              // If any legal move exists, it's not checkmate
+              return false;
             }
           }
         }
@@ -483,14 +499,16 @@ export const isCheckmate = (board, color, gameState = {}) => {
     }
   }
   
-  // If no move can get the king out of check, it's checkmate
+  // If no legal move exists and the king is in check, it's checkmate
   return true;
 };
 
 // Check if a player is in stalemate
-export const isStalemate = (board, color, gameState = {}) => {
-  // If in check, it's not stalemate
-  if (isInCheck(board, color)) return false;
+export const isStalemate = (board, color, gameState) => {
+  // If the king is in check, it's not stalemate
+  if (isInCheck(board, color, gameState)) {
+    return false;
+  }
   
   // Check if any legal move exists
   for (let fromRow = 0; fromRow < 8; fromRow++) {
@@ -514,7 +532,7 @@ export const isStalemate = (board, color, gameState = {}) => {
 };
 
 // Evaluate the board position (for AI)
-const evaluateBoard = (board) => {
+const evaluateBoard = (board, gameState) => {
   let score = 0;
   
   // Material evaluation
@@ -610,15 +628,15 @@ const evaluateBoard = (board) => {
   }
   
   // Check and checkmate evaluation
-  if (isCheckmate(board, 'black')) {
+  if (isCheckmate(board, 'black', gameState)) {
     score += 1000; // White wins
-  } else if (isCheckmate(board, 'white')) {
+  } else if (isCheckmate(board, 'white', gameState)) {
     score -= 1000; // Black wins
   } else {
-    if (isInCheck(board, 'black')) {
+    if (isInCheck(board, 'black', gameState)) {
       score += 0.5; // Black is in check
     }
-    if (isInCheck(board, 'white')) {
+    if (isInCheck(board, 'white', gameState)) {
       score -= 0.5; // White is in check
     }
   }
@@ -651,17 +669,17 @@ const findAllValidMoves = (board, color, gameState) => {
 // Minimax algorithm for AI with alpha-beta pruning
 const minimax = (board, depth, alpha, beta, isMaximizing, gameState) => {
   if (depth === 0) {
-    return evaluateBoard(board);
+    return evaluateBoard(board, gameState);
   }
   
   // Check for terminal states
-  if (isCheckmate(board, 'white')) {
+  if (isCheckmate(board, 'white', gameState)) {
     return -1000 - depth; // Black wins, prefer quicker checkmate
   }
-  if (isCheckmate(board, 'black')) {
+  if (isCheckmate(board, 'black', gameState)) {
     return 1000 + depth; // White wins, prefer quicker checkmate
   }
-  if (isStalemate(board, 'white') || isStalemate(board, 'black')) {
+  if (isStalemate(board, 'white', gameState) || isStalemate(board, 'black', gameState)) {
     return 0; // Draw
   }
   

@@ -459,4 +459,15 @@
   100% {
     box-shadow: 0 0 10px rgba(0, 0, 255, 0.3);
   }
+}
+
+.ai-thinking-status {
+  color: #2196f3;
+  font-weight: bold;
+  animation: pulse 1.5s infinite;
+}
+
+.ai-ready-status {
+  color: #2e7d32;
+  font-weight: bold;
 } 

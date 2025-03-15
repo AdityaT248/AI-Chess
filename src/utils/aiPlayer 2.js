@@ -1,13 +1,17 @@
 import { 
+  // eslint-disable-next-line no-unused-vars
   makeMove, 
   isValidMove, 
+  // eslint-disable-next-line no-unused-vars
   isInCheck, 
+  // eslint-disable-next-line no-unused-vars
   isCheckmate, 
+  // eslint-disable-next-line no-unused-vars
   isStalemate,
   cloneBoard
 } from './chessLogic';
 
-// Piece values for evaluation
+// Piece values for evaluation (standard chess values)
 const pieceValues = {
   'pawn': 100,
   'knight': 320,
@@ -69,7 +73,7 @@ const positionBonus = {
     [-10, 0, 5, 0, 0, 0, 0, -10],
     [-20, -10, -10, -5, -5, -10, -10, -20]
   ],
-  'king': [
+  'king_middlegame': [
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
     [-30, -40, -40, -50, -50, -40, -40, -30],
@@ -79,8 +83,7 @@ const positionBonus = {
     [20, 20, 0, 0, 0, 0, 20, 20],
     [20, 30, 10, 0, 0, 10, 30, 20]
   ],
-  // Endgame king position values - encourage king to move to center in endgame
-  'kingEndgame': [
+  'king_endgame': [
     [-50, -40, -30, -20, -20, -30, -40, -50],
     [-30, -20, -10, 0, 0, -10, -20, -30],
     [-30, -10, 20, 30, 30, 20, -10, -30],
@@ -94,7 +97,7 @@ const positionBonus = {
 
 // Memoization cache for position evaluation
 const evaluationCache = new Map();
-const MAX_CACHE_SIZE = 100000;
+const MAX_CACHE_SIZE = 10000;
 
 // Clear cache when it gets too large
 const checkCacheSize = () => {
@@ -118,38 +121,42 @@ const getBoardHash = (board) => {
   return hash;
 };
 
-// Count material to determine game phase
-const countMaterial = (board) => {
-  let material = 0;
+// Check if we're in the endgame (simplified)
+const isEndgame = (board) => {
+  let pieceCount = 0;
+  let queenCount = 0;
+  
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = board[row][col];
       if (piece && piece.type !== 'king' && piece.type !== 'pawn') {
-        material += pieceValues[piece.type];
+        pieceCount++;
+        if (piece.type === 'queen') {
+          queenCount++;
+        }
       }
     }
   }
-  return material;
+  
+  // Endgame if few pieces remain or no queens
+  return pieceCount <= 6 || queenCount === 0;
 };
 
 // Evaluate the board position
 const evaluateBoard = (board, gameState) => {
   // Check for checkmate or stalemate
   if (isCheckmate(board, 'black', gameState)) {
-    return 10000; // White wins
+    return 100000; // White wins
   }
   if (isCheckmate(board, 'white', gameState)) {
-    return -10000; // Black wins
+    return -100000; // Black wins
   }
   if (isStalemate(board, 'white', gameState) || isStalemate(board, 'black', gameState)) {
     return 0; // Draw
   }
   
   let score = 0;
-  
-  // Determine game phase (opening, middlegame, endgame)
-  const totalMaterial = countMaterial(board);
-  const isEndgame = totalMaterial < 3000; // Less than a queen and rook worth of material
+  const endgame = isEndgame(board);
   
   // Material and position evaluation
   for (let row = 0; row < 8; row++) {
@@ -160,12 +167,14 @@ const evaluateBoard = (board, gameState) => {
       // Base material value
       const materialValue = pieceValues[piece.type];
       
-      // Position value - use endgame table for kings in endgame
-      let positionValue;
-      if (piece.type === 'king' && isEndgame) {
+      // Position value
+      let positionValue = 0;
+      if (piece.type === 'king') {
+        // Use different tables for king in middlegame vs endgame
+        const table = endgame ? 'king_endgame' : 'king_middlegame';
         positionValue = piece.color === 'white' 
-          ? positionBonus.kingEndgame[row][col] 
-          : positionBonus.kingEndgame[7 - row][col];
+          ? positionBonus[table][row][col] 
+          : positionBonus[table][7 - row][col];
       } else {
         positionValue = piece.color === 'white' 
           ? positionBonus[piece.type][row][col] 
@@ -205,16 +214,35 @@ const evaluateBoard = (board, gameState) => {
         }
         bonusValue -= doubledPawns * 20;
         
-        // Bonus for connected pawns
-        if (col > 0 && board[row][col-1] && 
-            board[row][col-1].type === 'pawn' && 
-            board[row][col-1].color === piece.color) {
+        // Bonus for protected pawns
+        const direction = piece.color === 'white' ? 1 : -1;
+        if ((col > 0 && board[row + direction] && board[row + direction][col - 1] && 
+             board[row + direction][col - 1].type === 'pawn' && 
+             board[row + direction][col - 1].color === piece.color) ||
+            (col < 7 && board[row + direction] && board[row + direction][col + 1] && 
+             board[row + direction][col + 1].type === 'pawn' && 
+             board[row + direction][col + 1].color === piece.color)) {
           bonusValue += 10;
         }
-        if (col < 7 && board[row][col+1] && 
-            board[row][col+1].type === 'pawn' && 
-            board[row][col+1].color === piece.color) {
-          bonusValue += 10;
+      }
+      
+      // Rook bonuses
+      if (piece.type === 'rook') {
+        // Bonus for rooks on open files
+        let openFile = true;
+        for (let r = 0; r < 8; r++) {
+          if (board[r][col] && board[r][col].type === 'pawn') {
+            openFile = false;
+            break;
+          }
+        }
+        if (openFile) {
+          bonusValue += 25;
+        }
+        
+        // Bonus for rooks on 7th rank
+        if ((piece.color === 'white' && row === 1) || (piece.color === 'black' && row === 6)) {
+          bonusValue += 30;
         }
       }
       
@@ -224,8 +252,7 @@ const evaluateBoard = (board, gameState) => {
         for (let r = 0; r < 8; r++) {
           for (let c = 0; c < 8; c++) {
             if (r !== row || c !== col) {
-              const otherPiece = board[r][c];
-              if (otherPiece && otherPiece.type === 'bishop' && otherPiece.color === piece.color) {
+              if (board[r][c] && board[r][c].type === 'bishop' && board[r][c].color === piece.color) {
                 hasPair = true;
                 break;
               }
@@ -234,21 +261,21 @@ const evaluateBoard = (board, gameState) => {
           if (hasPair) break;
         }
         if (hasPair) {
-          bonusValue += 50; // Bishop pair bonus
+          bonusValue += 30;
         }
       }
       
-      // Rook on open file bonus
-      if (piece.type === 'rook') {
-        let openFile = true;
-        for (let r = 0; r < 8; r++) {
-          if (board[r][col] && board[r][col].type === 'pawn') {
-            openFile = false;
-            break;
-          }
+      // King safety
+      if (piece.type === 'king' && !endgame) {
+        // Penalty for exposed king
+        if (isInCheck(board, piece.color)) {
+          bonusValue -= 50;
         }
-        if (openFile) {
-          bonusValue += 30;
+        
+        // Bonus for castled king
+        if ((piece.color === 'white' && (col <= 2 || col >= 6) && row === 7) ||
+            (piece.color === 'black' && (col <= 2 || col >= 6) && row === 0)) {
+          bonusValue += 60;
         }
       }
       
@@ -265,10 +292,10 @@ const evaluateBoard = (board, gameState) => {
   }
   
   // Check bonus/penalty
-  if (isInCheck(board, 'black', gameState)) {
+  if (isInCheck(board, 'black')) {
     score += 50; // Bonus for putting black in check
   }
-  if (isInCheck(board, 'white', gameState)) {
+  if (isInCheck(board, 'white')) {
     score -= 50; // Penalty for white being in check
   }
   
@@ -286,23 +313,7 @@ const findAllValidMoves = (board, color, gameState) => {
         for (let toRow = 0; toRow < 8; toRow++) {
           for (let toCol = 0; toCol < 8; toCol++) {
             if (isValidMove(board, fromRow, fromCol, toRow, toCol, gameState)) {
-              // Check for pawn promotion
-              if (piece.type === 'pawn' && 
-                  ((color === 'white' && toRow === 0) || 
-                   (color === 'black' && toRow === 7))) {
-                // Add moves for each promotion piece
-                for (const promotionPiece of ['queen', 'rook', 'bishop', 'knight']) {
-                  moves.push({ 
-                    fromRow, 
-                    fromCol, 
-                    toRow, 
-                    toCol, 
-                    promotionPiece 
-                  });
-                }
-              } else {
-                moves.push({ fromRow, fromCol, toRow, toCol });
-              }
+              moves.push({ fromRow, fromCol, toRow, toCol });
             }
           }
         }
@@ -311,8 +322,10 @@ const findAllValidMoves = (board, color, gameState) => {
   }
   
   // Sort moves to improve alpha-beta pruning efficiency
-  // Try captures first
+  // Try captures, checks, and promotions first
   moves.sort((a, b) => {
+    const pieceA = board[a.fromRow][a.fromCol];
+    const pieceB = board[b.fromRow][b.fromCol];
     const targetA = board[a.toRow][a.toCol];
     const targetB = board[b.toRow][b.toCol];
     
@@ -320,11 +333,11 @@ const findAllValidMoves = (board, color, gameState) => {
     const captureValueA = targetA ? pieceValues[targetA.type] : 0;
     const captureValueB = targetB ? pieceValues[targetB.type] : 0;
     
-    // Prioritize promotions
-    const promotionValueA = a.promotionPiece ? pieceValues[a.promotionPiece] : 0;
-    const promotionValueB = b.promotionPiece ? pieceValues[b.promotionPiece] : 0;
+    // Prioritize pawn promotions
+    const promotionA = pieceA.type === 'pawn' && (a.toRow === 0 || a.toRow === 7) ? 1000 : 0;
+    const promotionB = pieceB.type === 'pawn' && (b.toRow === 0 || b.toRow === 7) ? 1000 : 0;
     
-    return (captureValueB + promotionValueB) - (captureValueA + promotionValueA);
+    return (captureValueB + promotionB) - (captureValueA + promotionA);
   });
   
   return moves;
@@ -339,13 +352,13 @@ const minimax = (board, depth, alpha, beta, maximizingPlayer, gameState, startTi
   
   // Check for terminal states
   if (isCheckmate(board, 'white', gameState)) {
-    return -10000 - depth; // Prefer shorter paths to checkmate
+    return -100000;
   }
   if (isCheckmate(board, 'black', gameState)) {
-    return 10000 + depth; // Prefer shorter paths to checkmate
+    return 100000;
   }
   if (isStalemate(board, 'white', gameState) || isStalemate(board, 'black', gameState)) {
-    return 0; // Draw
+    return 0;
   }
   
   // If we've reached the maximum depth, evaluate the board
@@ -367,8 +380,8 @@ const minimax = (board, depth, alpha, beta, maximizingPlayer, gameState, startTi
   
   // If no valid moves, it's either checkmate or stalemate
   if (moves.length === 0) {
-    if (isInCheck(board, color, gameState)) {
-      return maximizingPlayer ? -10000 - depth : 10000 + depth; // Checkmate
+    if (isInCheck(board, color)) {
+      return maximizingPlayer ? -100000 : 100000; // Checkmate
     } else {
       return 0; // Stalemate
     }
@@ -377,11 +390,11 @@ const minimax = (board, depth, alpha, beta, maximizingPlayer, gameState, startTi
   let bestValue = maximizingPlayer ? -Infinity : Infinity;
   
   for (const move of moves) {
-    const { fromRow, fromCol, toRow, toCol, promotionPiece } = move;
+    const { fromRow, fromCol, toRow, toCol } = move;
     
     // Make the move
     const { board: newBoard, gameState: newGameState } = makeMove(
-      board, fromRow, fromCol, toRow, toCol, gameState, promotionPiece
+      board, fromRow, fromCol, toRow, toCol, gameState
     );
     
     // Recursively evaluate the position
@@ -439,11 +452,11 @@ const iterativeDeepeningSearch = (board, color, gameState, maxDepth, maxTime) =>
     
     try {
       for (const move of moves) {
-        const { fromRow, fromCol, toRow, toCol, promotionPiece } = move;
+        const { fromRow, fromCol, toRow, toCol } = move;
         
         // Make the move
         const { board: newBoard, gameState: newGameState } = makeMove(
-          board, fromRow, fromCol, toRow, toCol, gameState, promotionPiece
+          board, fromRow, fromCol, toRow, toCol, gameState
         );
         
         // Evaluate the position
@@ -470,12 +483,9 @@ const iterativeDeepeningSearch = (board, color, gameState, maxDepth, maxTime) =>
       bestMove = currentBestMove;
       bestScore = currentBestScore;
       
-      console.log(`Completed depth ${depth}, best score: ${bestScore}`);
-      
       // If we found a winning move, return it immediately
-      if ((color === 'white' && bestScore > 9000) || 
-          (color === 'black' && bestScore < -9000)) {
-        console.log("Found winning move!");
+      if ((color === 'white' && bestScore > 90000) || 
+          (color === 'black' && bestScore < -90000)) {
         break;
       }
     } catch (error) {
@@ -506,24 +516,24 @@ export const getAIMove = (board, color, gameState, difficulty) => {
     
     switch (difficulty) {
       case 'easy':
+        maxDepth = 2;
+        maxTime = 1000; // 1 second
+        break;
+      case 'medium':
         maxDepth = 3;
         maxTime = 2000; // 2 seconds
         break;
-      case 'medium':
+      case 'hard':
         maxDepth = 4;
         maxTime = 3000; // 3 seconds
         break;
-      case 'hard':
-        maxDepth = 5;
-        maxTime = 5000; // 5 seconds
-        break;
       default:
-        maxDepth = 4;
-        maxTime = 3000;
+        maxDepth = 3;
+        maxTime = 2000;
     }
     
     // Add randomness for easier difficulties
-    const randomChance = difficulty === 'easy' ? 0.2 : (difficulty === 'medium' ? 0.05 : 0);
+    const randomChance = difficulty === 'easy' ? 0.3 : (difficulty === 'medium' ? 0.1 : 0);
     if (Math.random() < randomChance) {
       const moves = findAllValidMoves(board, color, gameState);
       if (moves.length > 0) {
